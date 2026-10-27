@@ -1,6 +1,6 @@
 # Student Training — Team Workspace
 
-[Open the live workspace](https://student-training-team-hisham.happybread18743.chatgpt.site)
+[Open the live workspace](https://student-training-team-maha.happybread18743.chatgpt.site)
 
 Bilingual English/Arabic team platform with administrator-managed accounts, shared assignments, event scheduling, document approvals, and role permissions.
 
