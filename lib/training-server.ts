@@ -36,12 +36,14 @@ function email(value: unknown) {
   if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/i.test(s) || s.startsWith('.') || s.includes('..') || s.includes('.@')) fail(400,'Enter a valid email address.');
   return s;
 }
-function password(value: unknown, identity: {email:string,name:string}) {
+const COMMON_PASSWORDS=new Set(['password','password1','password12','password123','passw0rd','12345678','123456789','1234567890','0987654321','87654321','qwerty12','qwerty123','qwertyuiop','asdfghjk','asdfghjkl','zxcvbnm1','1q2w3e4r','1qaz2wsx','abc12345','abcd1234','iloveyou','iloveyou1','letmein1','welcome1','welcome123','admin123','administrator','changeme','sunshine','football','baseball','princess','superman','trustno1','11111111','00000000','12121212','11223344','aaaaaaaa']);
+// Accept most passwords; reject only very short, very common, or trivially patterned ones.
+function password(value: unknown, _identity: {email:string,name:string}) {
   const s=text(value,128), lower=s.toLowerCase();
-  if(s.length<15) fail(400,'Use a password between 15 and 128 characters.');
-  const common=['password','qwerty','123456','letmein','welcome','iloveyou','admin','changeme'];
-  const parts=[identity.email.split('@')[0],...identity.name.toLowerCase().split(/\s+/)].filter(p=>p.length>=4);
-  if(new Set(lower).size<5 || /^\d+$/.test(s) || common.some(p=>lower.includes(p)) || parts.some(p=>lower.includes(p))) fail(400,'Choose a less predictable password without your name or email.');
+  if(s.length<8) fail(400,'Use a password between 8 and 128 characters.');
+  const codes=[...lower].map(c=>c.codePointAt(0)!), steps=new Set(codes.slice(1).map((c,i)=>c-codes[i]));
+  const sequence=steps.size===1&&[1,-1].includes([...steps][0]);
+  if(new Set(lower).size<4 || sequence || COMMON_PASSWORDS.has(lower)) fail(400,'That password is too simple. Try something less common.');
   return s;
 }
 function account(v: Row, optionalPassword=false) {

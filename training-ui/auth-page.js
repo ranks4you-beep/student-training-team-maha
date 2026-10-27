@@ -17,7 +17,7 @@ function renderAccountMode(){
   field('setupBadge').hidden=!(signup&&setupRequired);
   field('nameField').hidden=!signup;field('fullName').required=signup;
   field('confirmField').hidden=!signup;field('confirmPassword').required=signup;
-  field('passwordHint').hidden=!signup;field('password').minLength=signup?15:1;
+  field('passwordHint').hidden=!signup;field('password').minLength=signup?8:1;
   field('password').autocomplete=signup?'new-password':'current-password';
   for(const [id,mode] of [['loginTab','login'],['signupTab','signup']]){
     field(id).classList.toggle('active',authMode===mode);field(id).setAttribute('aria-pressed',String(authMode===mode));field(id).disabled=authBusy;
