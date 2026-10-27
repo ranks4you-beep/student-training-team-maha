@@ -77,11 +77,10 @@ async function session(db: Database, request: Request) {
   if(s&&s.last_seen<now()-60) await statement(db,'UPDATE auth_sessions SET last_seen=? WHERE token_hash=?',now(),s.token_hash).run();
   return s;
 }
+// The administrator is activated only through the private setup link; no host identity headers are trusted.
 function canSetup(request: Request) {
-  const e=(env as any).OWNER_PLATFORM_EMAIL;
   const supplied=request.headers.get('x-setup-token')||'', expected=(env as any).ADMIN_SETUP_TOKEN_HASH;
-  const privateSetup=frontendRequest(request) && /^[A-Za-z0-9_-]{43}$/.test(supplied) && typeof expected==='string' && /^[a-f0-9]{64}$/.test(expected) && timingSafeEqual(Buffer.from(hash(supplied),'hex'),Buffer.from(expected,'hex'));
-  return privateSetup || (!!e && !!request.headers.get('oai-authenticated-user-id') && request.headers.get('oai-authenticated-user-email')?.toLowerCase()===e.toLowerCase());
+  return frontendRequest(request) && /^[A-Za-z0-9_-]{43}$/.test(supplied) && typeof expected==='string' && /^[a-f0-9]{64}$/.test(expected) && timingSafeEqual(Buffer.from(hash(supplied),'hex'),Buffer.from(expected,'hex'));
 }
 async function rate(db: Database, request: Request, kind: string, mail: string) {
   const ip=request.headers.get('cf-connecting-ip')||'unknown';
@@ -164,6 +163,8 @@ async function dispatch(request: Request) {
   const db=env.DB;if(!db) fail(503,'Workspace storage is unavailable.');
   const user=await session(db,request);
   if(!path.startsWith('/api/')) {
+    // The workspace pages live on GitHub Pages; this server only answers the API.
+    if((env as any).FRONTEND_URL) return new Response(null,{status:302,headers:{Location:(env as any).FRONTEND_URL}});
     let name=path==='/'?'/static/index.html':['/login','/signup'].includes(path)?'/static/auth.html':path;
     if(name==='/static/index.html'&&!user) return new Response(null,{status:303,headers:{Location:'/login'}});
     if(['/login','/signup'].includes(path)&&user) return new Response(null,{status:303,headers:{Location:'/'}});
@@ -195,11 +196,11 @@ async function dispatch(request: Request) {
     const a=account({...v,role:'admin',active:true});
     if(!(env as any).ADMIN_EMAIL||a.email!==(env as any).ADMIN_EMAIL.toLowerCase()) fail(403,'Use the reserved administrator email.');
     await rate(db,request,'setup',a.email);
-    const id=hex(),hashed=await passwordHash(a.password),platformId=request.headers.get('oai-authenticated-user-id');
+    const id=hex(),hashed=await passwordHash(a.password);
     const initial={id,...a,credential_version:1};
     try { await db.batch([
       statement(db,"INSERT INTO app_settings(key,value) VALUES('admin_setup',?)",id),
-      statement(db,'INSERT INTO users(id,name,email,role,active,password_hash,created_at,platform_user_id) VALUES(?,?,?,?,?,?,?,?)',id,a.name,a.email,'admin',1,hashed,new Date().toISOString(),platformId),
+      statement(db,'INSERT INTO users(id,name,email,role,active,password_hash,created_at,platform_user_id) VALUES(?,?,?,?,?,?,?,?)',id,a.name,a.email,'admin',1,hashed,new Date().toISOString(),null),
       audit(db,initial,'signup','user',id),
     ]); } catch(e) {if(await get(db,"SELECT key FROM app_settings WHERE key='admin_setup'")) fail(409,'Administrator setup is already complete.');throw e;}
     return issue(db,request,initial);
@@ -324,6 +325,6 @@ export async function handle(request: Request): Promise<Response> {
   }
   headers.set('Cache-Control','no-store');headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','same-origin');
   headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');
-  headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com");
+  headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
   return new Response(response.body,{status:response.status,headers});
 }

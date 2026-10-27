@@ -1,0 +1,22 @@
+// Account server for the GitHub Pages workspace, hosted on Cloudflare Workers + D1.
+// ADMIN_SETUP_TOKEN_HASH is a secret: set it with `npx wrangler secret put ADMIN_SETUP_TOKEN_HASH`.
+{
+  "name": "student-training-team-maha",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "ADMIN_EMAIL": "alabsimaha@gmail.com",
+    "FRONTEND_ORIGIN": "https://ranks4you-beep.github.io",
+    "FRONTEND_URL": "https://ranks4you-beep.github.io/student-training-team-maha/"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "student-training-team-maha",
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

@@ -52,3 +52,4 @@ yarn-error.log*
 *.sqlite3
 *.sqlite-*
 *.tar.gz
+/.wrangler-runtime/
