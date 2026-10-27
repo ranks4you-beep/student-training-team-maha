@@ -5,8 +5,7 @@ function syncAuthShell(){
   translateAccountText();
   document.getElementById('sessionName').textContent=currentUser?.name||'';
   document.getElementById('sessionRole').textContent=currentUser?roleLabel(currentUser.role):'';
-  document.querySelector('[data-view="users"]').hidden=!isLeader();
-  document.querySelector('[data-view="users"]').classList.toggle('auth-forbidden',!isLeader());
+  if(typeof renderTopBar==='function'&&M.programs)renderTopBar();
 }
 function applyPermissions(){
   document.querySelectorAll('#content button[onclick],#modalBody button[onclick]').forEach(button=>{

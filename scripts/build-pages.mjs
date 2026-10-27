@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 const read=name=>readFile('training-ui/'+name,'utf8');
 await mkdir('docs/assets',{recursive:true});
-for(const name of ['i18n.js','auth-shared.js','auth.css','workspace-auth.js','workspace-sync.js']) await copyFile('training-ui/'+name,'docs/assets/'+name);
+for(const name of ['i18n.js','auth-shared.js','auth.css','theme.css','home.js','workspace-auth.js','workspace-sync.js']) await copyFile('training-ui/'+name,'docs/assets/'+name);
 await copyFile('scripts/pages-runtime.js','docs/assets/pages-runtime.js');
 const extraTranslations={
  'Your administrator has not activated this workspace yet. Use the private setup link to create the leader account.':'لم يفعّل المسؤول مساحة العمل بعد. استخدمي رابط الإعداد الخاص لإنشاء حساب القائد.',
