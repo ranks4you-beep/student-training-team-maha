@@ -63,15 +63,25 @@ async function passwordMatches(value: string, stored: string) {
   return expected.length===actual.length&&timingSafeEqual(expected,actual);
 }
 function cookie(request: Request) { return request.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith(COOKIE+'='))?.slice(COOKIE.length+1)||''; }
+function frontendRequest(request: Request) {
+  const allowed=(env as any).FRONTEND_ORIGIN;
+  return !!allowed && request.headers.get('origin')===allowed;
+}
+function sessionToken(request: Request) {
+  const authorization=request.headers.get('authorization');
+  return authorization?.startsWith('Bearer ')?authorization.slice(7):cookie(request);
+}
 async function session(db: Database, request: Request) {
-  const token=cookie(request); if(!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const token=sessionToken(request); if(!/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const s=await get(db,`SELECT u.*,s.token_hash,s.csrf_token,s.last_seen FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND s.last_seen>? AND u.active=1 AND s.credential_version=u.credential_version`,hash(token),now(),now()-IDLE);
   if(s&&s.last_seen<now()-60) await statement(db,'UPDATE auth_sessions SET last_seen=? WHERE token_hash=?',now(),s.token_hash).run();
   return s;
 }
 function canSetup(request: Request) {
   const e=(env as any).OWNER_PLATFORM_EMAIL;
-  return !!e && !!request.headers.get('oai-authenticated-user-id') && request.headers.get('oai-authenticated-user-email')?.toLowerCase()===e.toLowerCase();
+  const supplied=request.headers.get('x-setup-token')||'', expected=(env as any).ADMIN_SETUP_TOKEN_HASH;
+  const privateSetup=frontendRequest(request) && /^[A-Za-z0-9_-]{43}$/.test(supplied) && typeof expected==='string' && /^[a-f0-9]{64}$/.test(expected) && timingSafeEqual(Buffer.from(hash(supplied),'hex'),Buffer.from(expected,'hex'));
+  return privateSetup || (!!e && !!request.headers.get('oai-authenticated-user-id') && request.headers.get('oai-authenticated-user-email')?.toLowerCase()===e.toLowerCase());
 }
 async function rate(db: Database, request: Request, kind: string, mail: string) {
   const ip=request.headers.get('cf-connecting-ip')||'unknown';
@@ -85,9 +95,11 @@ async function rate(db: Database, request: Request, kind: string, mail: string) 
 async function issue(db: Database, request: Request, user: Row) {
   const token=secret(),csrf=secret();
   const changes=[statement(db,'INSERT INTO auth_sessions(token_hash,user_id,csrf_token,expires_at,last_seen,credential_version) SELECT ?,id,?,?,?,credential_version FROM users WHERE id=? AND active=1 AND credential_version=?',hash(token),csrf,now()+TTL,now(),user.id,user.credential_version)];
-  if(cookie(request)) changes.unshift(statement(db,'DELETE FROM auth_sessions WHERE token_hash=?',hash(cookie(request))));
+  if(sessionToken(request)) changes.unshift(statement(db,'DELETE FROM auth_sessions WHERE token_hash=?',hash(sessionToken(request))));
   const inserted=(await db.batch(changes)).at(-1)!;
   if(!inserted.meta.changes) fail(401,'Email or password is incorrect.');
+  // GitHub Pages uses an origin-bound bearer session, avoiding third-party cookies.
+  if(frontendRequest(request)) return json({user:publicUser(user),csrf_token:csrf,session_token:token});
   return json({user:publicUser(user),csrf_token:csrf},200,{'Set-Cookie':`${COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${TTL}${new URL(request.url).protocol==='https:'?'; Secure':''}`});
 }
 function requireRole(user: Row, roles: string[]) { if(!roles.includes(user.role)) fail(403,roles.length===1?'Only the leader can manage accounts and approvals.':'Your role cannot make this change.'); }
@@ -141,8 +153,15 @@ async function ensureCatalog(db: Database) {
 }
 
 async function dispatch(request: Request) {
-  const db=env.DB;if(!db) fail(503,'Workspace storage is unavailable.');
   const url=new URL(request.url), path=decodeURI(url.pathname), method=request.method;
+  if(path.startsWith('/api/') && method==='OPTIONS') {
+    if(!frontendRequest(request)) fail(403,'Request origin was rejected.');
+    const requested=(request.headers.get('access-control-request-headers')||'').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
+    if(requested.some(name=>!['authorization','content-type','x-csrf-token','x-setup-token'].includes(name))) fail(403,'Request origin was rejected.');
+    return new Response(null,{status:204,headers:{'Access-Control-Allow-Methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, X-CSRF-Token, X-Setup-Token','Access-Control-Max-Age':'600'}});
+  }
+  if(path.startsWith('/api/') && request.headers.get('origin') && request.headers.get('origin')!==url.origin && !frontendRequest(request)) fail(403,'Request origin was rejected.');
+  const db=env.DB;if(!db) fail(503,'Workspace storage is unavailable.');
   const user=await session(db,request);
   if(!path.startsWith('/api/')) {
     let name=path==='/'?'/static/index.html':['/login','/signup'].includes(path)?'/static/auth.html':path;
@@ -158,7 +177,7 @@ async function dispatch(request: Request) {
   let v:Row={};
   if(writes) {
     const origin=request.headers.get('origin'), fetchSite=request.headers.get('sec-fetch-site');
-    if((origin&&origin!==url.origin)||fetchSite==='cross-site') fail(403,'Request origin was rejected.');
+    if(!frontendRequest(request)&&((origin&&origin!==url.origin)||fetchSite==='cross-site')) fail(403,'Request origin was rejected.');
     if(!publicRoute&&request.headers.get('x-csrf-token')!==user!.csrf_token) fail(403,'Refresh the page and try again.');
     if(!request.headers.get('content-type')?.startsWith('application/json')) fail(415,'JSON requests are required.');
     if(Number(request.headers.get('content-length'))>65536) fail(413,'Request is too large.');
@@ -299,6 +318,10 @@ export async function handle(request: Request): Promise<Response> {
     else {console.error('Training request failed',e instanceof Error?e.message:'Unknown error');response=json({detail:'The request could not be completed. Please refresh and try again.'},500);}
   }
   const headers=new Headers(response.headers);
+  if(new URL(request.url).pathname.startsWith('/api/') && frontendRequest(request)) {
+    headers.set('Access-Control-Allow-Origin',request.headers.get('origin')!);
+    headers.set('Vary','Origin');
+  }
   headers.set('Cache-Control','no-store');headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','same-origin');
   headers.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');
   headers.set('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com");

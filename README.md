@@ -1,32 +1,31 @@
 # Student Training — Team Workspace
 
-[Open the live workspace](https://student-training-team-maha.happybread18743.chatgpt.site)
+[Open the website](https://ranks4you-beep.github.io/student-training-team-maha/)
 
-Bilingual English/Arabic team platform with administrator-managed accounts, shared assignments, event scheduling, document approvals, and role permissions.
+The complete bilingual English/Arabic interface is served by GitHub Pages. The address stays on `github.io` for login, the dashboard, account management, assignments, calendars and document tracking. There is no external page redirect.
 
-Hosted version of the approved bilingual Student Training application. Records are shared in Cloudflare D1. Browser local storage is used only for the interface language.
+## Team access
 
-## Administration
+The reserved leader account is activated through a private, single-use setup link. Its owner chooses the password privately. Public registration is closed; the leader creates team accounts, chooses roles, disables accounts and resets passwords under **Accounts & permissions**. Email verification is disabled.
 
-The hosting owner signs in through the platform's **Continue as site owner** link to activate the single reserved administrator email. The owner chooses the administrator password privately. After activation, public signup is disabled. Administrators create team accounts under **Accounts & permissions**, choose a role, disable accounts and reset passwords. No email verification or mail sender is configured.
+Every signed-in role sees the same shared assignments, instructions and linked events. Updates refresh every 15 seconds while the page is open and no form is being edited. Administrators manage accounts and approvals. Coordinators manage events, assignments and unapproved documents. Members update task status; viewers have read access.
 
-The public URL serves a login page. Workspace APIs require an active app session; mutations require a matching CSRF token and server-authorized role. Passwords use salted native scrypt (N=32768, r=8, p=3). Sessions are stored as SHA-256 hashes, expire after eight hours or one idle hour, and are invalidated by role/password/email changes or account deactivation. Every authenticated role sees the same events, task instructions and assignments. Changes refresh automatically every 15 seconds while an untouched page is open.
+## Hosting and security
 
-Runtime settings `OWNER_PLATFORM_EMAIL` and `ADMIN_EMAIL` are configured through Sites as secrets. The starter's local mock identity is for loopback development only. Hosted ownership checks use identity headers injected by Sites dispatch. Do not expose the Worker separately from Sites dispatch.
+GitHub Pages serves the actual interface from `docs/`. A separate Worker with D1 provides secure login and shared storage. The public API origin is configured in `scripts/pages-runtime.js`; no server secrets or user records are embedded in the site.
 
-## Development
+The GitHub interface uses bearer sessions kept in per-tab browser session storage, avoiding third-party cookies. API requests require an active server session and matching CSRF token for changes. Only the configured frontend origin receives cross-origin API access. Roles are checked by the server. Passwords use salted native scrypt (N=32768, r=8, p=3); the database stores session hashes. Sessions expire after eight hours or one idle hour and are invalidated by password, role or email changes or deactivation.
 
-- `npm run dev` starts the portable Vinext preview.
-- `node scripts/embed-training-assets.mjs` embeds the authored HTML/CSS/JS from `training-ui/` for the server routes.
-- `npm run db:generate` appends schema migrations after changing `db/schema.ts`.
-- Follow the installed Sites skill to build, apply local migrations, package and publish.
-- Local QA data and hosted records are separate. The original local SQLite database was not imported.
+Production runtime settings are `OWNER_PLATFORM_EMAIL`, `ADMIN_EMAIL`, `FRONTEND_ORIGIN`, and `ADMIN_SETUP_TOKEN_HASH`. The setup hash authorizes only initial activation; the database prevents a second activation. Keep the activation link, private environment values, account data and database files out of Git. The backend's original same-origin HttpOnly-cookie interface remains available for operational use.
 
-Document tracking stores manually supplied file links and approval state; it does not upload files or synchronize OneDrive. There is no email password recovery; a leader resets team passwords. Keep the hosting owner's access for administrator setup and operational recovery.
+## Build
 
+- `npm run build:pages` regenerates `docs/` from `training-ui/` and the GitHub session adapter. It requires Node.js and no installed dependencies.
+- GitHub Pages publishes from the `main` branch and `/docs` directory.
+- `npm ci` and `npm run dev` run the backend development environment.
+- `node scripts/embed-training-assets.mjs` rebuilds the backend's bundled same-origin interface.
+- Change `db/schema.ts` and run `npm run db:generate` to append schema migrations.
 
-## GitHub publication
+The portable backend manifest intentionally omits the live Site identifier. No private Git history, production credentials, account records or database files are published here.
 
-This repository contains the application source. Enable GitHub Pages from the `main` branch and `/docs` directory to obtain a `github.io` entry URL. That entry opens the working hosted application. Accounts, passwords and shared records are processed by the hosted Worker and D1 database; GitHub Pages serves the entry page only.
-
-The public source contains no live database, account records, private environment settings, source-access credentials, or private Git history. Configure a new deployment's `OWNER_PLATFORM_EMAIL` and `ADMIN_EMAIL` privately. The portable `.openai/hosting.json` intentionally omits the original Site identifier.
+Document tracking records manually supplied file links and approval state. File uploads and automatic OneDrive synchronization are not implemented. A leader resets team passwords; email password recovery is not configured.
