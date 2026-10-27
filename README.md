@@ -1,31 +1,25 @@
 # Student Training — Team Workspace
 
-[Open the website](https://ranks4you-beep.github.io/student-training-team-maha/)
+Bilingual (English/Arabic) workspace for student training events, shared tasks and team coordination.
 
-The complete bilingual English/Arabic interface is served by GitHub Pages. The address stays on `github.io` for login, the dashboard, account management, assignments, calendars and document tracking. There is no external page redirect.
+- **Website:** https://ranks4you-beep.github.io/student-training-team-maha/ (GitHub Pages, built into `docs/`)
+- **Account server:** https://student-training-team-maha.student-training.workers.dev (Cloudflare Workers + D1). It answers only `/api/` requests; every other address redirects to the website.
 
-## Team access
+## Administration
 
-The reserved leader account is activated through a private, single-use setup link. Its owner chooses the password privately. Public registration is closed; the leader creates team accounts, chooses roles, disables accounts and resets passwords under **Accounts & permissions**. Email verification is disabled.
+The administrator account (`ADMIN_EMAIL` in `wrangler.jsonc`) is activated once, through a private setup link of the form `login.html#setup=<token>`. The server stores only the SHA-256 digest of that token, as the `ADMIN_SETUP_TOKEN_HASH` secret, and refuses a second activation. The browser removes the token from the address bar and sends it only to the API as a header. Never add the link or token to source, logs or documentation.
 
-Every signed-in role sees the same shared assignments, instructions and linked events. Updates refresh every 15 seconds while the page is open and no form is being edited. Administrators manage accounts and approvals. Coordinators manage events, assignments and unapproved documents. Members update task status; viewers have read access.
+After activation, public signup stays closed. The administrator creates team accounts under **Accounts & permissions**, chooses roles, disables accounts and resets passwords. There is no email verification or email password recovery.
 
-## Hosting and security
+## Security
 
-GitHub Pages serves the actual interface from `docs/`. A separate Worker with D1 provides secure login and shared storage. The public API origin is configured in `scripts/pages-runtime.js`; no server secrets or user records are embedded in the site.
+Passwords use salted scrypt (N=32768, r=8, p=3). The website uses bearer sessions stored per browser tab, so no third-party cookies are needed. Sessions are stored as SHA-256 hashes, expire after eight hours or one idle hour, and are invalidated by role/password/email changes or account deactivation. Writes require a CSRF token and a server-authorized role. Cross-origin requests are accepted only from `FRONTEND_ORIGIN`. Every signed-in role sees the same events, task instructions and assignments, and open pages refresh every 15 seconds.
 
-The GitHub interface uses bearer sessions kept in per-tab browser session storage, avoiding third-party cookies. API requests require an active server session and matching CSRF token for changes. Only the configured frontend origin receives cross-origin API access. Roles are checked by the server. Passwords use salted native scrypt (N=32768, r=8, p=3); the database stores session hashes. Sessions expire after eight hours or one idle hour and are invalidated by password, role or email changes or deactivation.
+## Development and deployment
 
-Production runtime settings are `OWNER_PLATFORM_EMAIL`, `ADMIN_EMAIL`, `FRONTEND_ORIGIN`, and `ADMIN_SETUP_TOKEN_HASH`. The setup hash authorizes only initial activation; the database prevents a second activation. Keep the activation link, private environment values, account data and database files out of Git. The backend's original same-origin HttpOnly-cookie interface remains available for operational use.
+- `npm run dev` starts a local preview. Copy `.env.example` to `.dev.vars` for local settings.
+- `npm run build:pages` regenerates `docs/` from `training-ui/` and `scripts/pages-runtime.js`. Commit and push to publish the website.
+- `npm run deploy` builds and deploys the account server (requires `npx wrangler login`).
+- `npm run db:generate` creates a migration after changing `db/schema.ts`; `npm run db:migrate` applies migrations to the production database.
 
-## Build
-
-- `npm run build:pages` regenerates `docs/` from `training-ui/` and the GitHub session adapter. It requires Node.js and no installed dependencies.
-- GitHub Pages publishes from the `main` branch and `/docs` directory.
-- `npm ci` and `npm run dev` run the backend development environment.
-- `node scripts/embed-training-assets.mjs` rebuilds the backend's bundled same-origin interface.
-- Change `db/schema.ts` and run `npm run db:generate` to append schema migrations.
-
-The portable backend manifest intentionally omits the live Site identifier. No private Git history, production credentials, account records or database files are published here.
-
-Document tracking records manually supplied file links and approval state. File uploads and automatic OneDrive synchronization are not implemented. A leader resets team passwords; email password recovery is not configured.
+Document tracking stores manually supplied file links and approval state; it does not upload files.

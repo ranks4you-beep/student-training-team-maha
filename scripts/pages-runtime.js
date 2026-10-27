@@ -1,5 +1,5 @@
 // Public configuration only. Credentials and account data are never embedded here.
-const TRAINING_API_ORIGIN = 'https://student-training-team-maha.happybread18743.chatgpt.site';
+const TRAINING_API_ORIGIN = 'https://student-training-team-maha.student-training.workers.dev';
 const TRAINING_BASE = new URL('../', document.currentScript.src);
 const TRAINING_SESSION_KEY = 'maha-training-session-v2';
 const TRAINING_SETUP_KEY = 'maha-training-private-setup-v1';

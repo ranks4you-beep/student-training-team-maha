@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "student-training-team-maha",
-      "database_id": "00000000-0000-4000-8000-000000000000",
+      "database_id": "8715c3f5-c9fd-4d51-a7ca-a37d4398e064",
       "migrations_dir": "drizzle"
     }
   ]
