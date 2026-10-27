@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>منصة التدريب الطلابي</title>
+  <link rel="stylesheet" href="/static/auth.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/auth-shared.js" defer></script>
+  <script src="/static/auth-page.js" defer></script>
+</head>
+<body>
+  <main class="auth-page">
+    <section class="brand-panel" aria-labelledby="brandTitle">
+      <div class="brand-lockup"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.7"/><path d="m14 18 3 3 5-7"/></svg></span><div><span class="eyebrow" data-auth-i18n="STUDENT SUPPORT & TRAINING"></span><p class="brand-name" data-auth-i18n="Student Training Platform"></p></div></div>
+      <div class="brand-copy"><span class="brand-line" aria-hidden="true"></span><h1 id="brandTitle" data-auth-i18n="One workspace. A stronger team."></h1><p data-auth-i18n="Plan training, follow progress, and keep your team connected."></p><div class="feature-list"><span><b aria-hidden="true">01</b><span data-auth-i18n="Organize events"></span></span><span><b aria-hidden="true">02</b><span data-auth-i18n="Track progress"></span></span><span><b aria-hidden="true">03</b><span data-auth-i18n="Clear team roles"></span></span></div></div>
+      <p class="brand-footer" data-auth-i18n="Team workspace · 1448 AH"></p>
+    </section>
+    <section class="form-panel" aria-labelledby="formTitle">
+      <div class="form-toolbar"><button id="languageToggle" class="language-toggle" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 4 6 4 9s-1 6-4 9c-3-3-4-6-4-9s1-6 4-9Z"/></svg><span id="languageName" lang="en" dir="ltr">English</span></button><span id="languageStatus" class="sr-only" role="status" aria-live="polite"></span></div>
+      <div class="auth-card">
+        <div class="mode-switch" aria-label="Account access"><button id="loginTab" type="button" data-auth-i18n="Log in"></button><button id="signupTab" type="button" data-auth-i18n="Sign up"></button></div>
+        <div id="setupBadge" class="setup-badge" hidden data-auth-i18n="First-time setup"></div>
+        <h2 id="formTitle"></h2><p id="formDescription" class="description"></p>
+        <div id="authError" class="form-error" role="alert" tabindex="-1" hidden></div>
+        <div id="ownerSetup" class="owner-setup" hidden><p data-auth-i18n="Only the site owner can activate the administrator account."></p><a class="primary-button" href="/signin-with-chatgpt?return_to=%2Fsignup" target="_top" data-auth-i18n="Continue as site owner"></a></div><form id="authForm">
+          <div id="nameField" class="field" hidden><label for="fullName" data-auth-i18n="Full name"></label><input id="fullName" name="name" autocomplete="name" maxlength="100"></div>
+          <div class="field"><label for="email" data-auth-i18n="Email address"></label><input id="email" name="email" type="email" autocomplete="username" inputmode="email" required maxlength="254" dir="ltr"></div>
+          <div class="field"><label for="password" data-auth-i18n="Password"></label><div class="password-row"><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128" aria-describedby="passwordHint"><button id="passwordToggle" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><p id="passwordHint" class="field-hint" hidden data-auth-i18n="Use at least 15 characters."></p></div>
+          <div id="confirmField" class="field" hidden><label for="confirmPassword" data-auth-i18n="Confirm password"></label><input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" maxlength="128"></div>
+          <button id="authSubmit" class="primary-button" type="submit" disabled></button>
+        </form>
+        <p class="account-help" data-auth-i18n="Contact your leader for an account or password reset."></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
